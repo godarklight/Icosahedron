@@ -1,0 +1,9 @@
+*.orig
+*.dll
+*.userprefs
+Icosahedron/bin/*
+Icosahedron/obj/*
+IcoTest/bin/*
+IcoTest/obj/*
+*.suo
+*.csproj.user
