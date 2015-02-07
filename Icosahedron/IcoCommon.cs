@@ -94,6 +94,83 @@ namespace Icosahedron
             return 20 * (int)Math.Pow(4, level);
         }
 
+        public static int EdgesInLevel(int level)
+        {
+            return 30 * (int)Math.Pow(4, level);
+        }
+
+        public static int Raycast(Vector3d direction, int level, bool normalize)
+        {
+            return Raycast(verticies, direction, level, normalize);
+        }
+
+        public static int Raycast(Vector3d[] raycastVerticies, Vector3d direction, int level, bool normalize)
+        {
+            if (normalize)
+            {
+                direction = direction.normalized;
+            }
+            Precalculate(level);
+            PrecalculateNeighbours(level);
+            int currentVertexID = 0;
+            Vector3d currentVertex = raycastVerticies[currentVertexID];
+            double currentDot = Vector3d.Dot(direction, currentVertex);
+            if (normalize)
+            {
+                currentVertex = currentVertex.normalized;
+            }
+            //Search level
+            for (int searchLevel = 0; searchLevel <= level; searchLevel++)
+            {
+                int[] currentNeighbours = neighbours[searchLevel];
+                //Walking state
+                int newVertexID = currentVertexID;
+                Vector3d newVertex = currentVertex;
+                double newDot = currentDot;
+                bool searchComplete = false;
+                while (!searchComplete)
+                {
+                    for (int searchNeighbour = 0; searchNeighbour < 6; searchNeighbour++)
+                    {
+                        int neighbourID = currentNeighbours[currentVertexID * 6 + searchNeighbour];
+                        if (neighbourID == -1)
+                        {
+                            break;
+                        }
+                        if (neighbourID == currentVertexID)
+                        {
+                            continue;
+                        }
+                        //Compare Dot product, bigger == closer.
+                        Vector3d neighbourVertex = verticies[neighbourID];
+                        if (normalize)
+                        {
+                            neighbourVertex = neighbourVertex.normalized;
+                        }
+                        double neighbourDot = Vector3d.Dot(direction, neighbourVertex);
+                        if (neighbourDot > newDot)
+                        {
+                            newVertex = neighbourVertex;
+                            newVertexID = neighbourID;
+                            newDot = neighbourDot;
+                        }
+                    }
+                    //Set next search state
+                    if (currentVertexID == newVertexID)
+                    {
+                        searchComplete = true;
+                    }
+                    else
+                    {
+                        currentVertex = newVertex;
+                        currentVertexID = newVertexID;
+                        currentDot = newDot;
+                    }
+                }
+            }
+            return currentVertexID;
+        }
+
         private static void Subdivide(int level, int oldVertexCount)
         {
             //<Vector3d>(verticies[level - 1]);

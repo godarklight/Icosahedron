@@ -95,6 +95,19 @@ namespace Icosahedron
             double rhsMag = rhs.x * rhs.x + rhs.y * rhs.y + rhs.z * rhs.z;
             return (lhsMag < rhsMag);
         }
+
+        public static double Dot(Vector3d lhs, Vector3d rhs)
+        {
+            return (lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z);
+        }
+
+        public static Vector3d Cross(Vector3d lhs, Vector3d rhs)
+        {
+            double crossX = lhs.y * rhs.z - lhs.z * rhs.y;
+            double crossY = lhs.z * rhs.x - lhs.x * rhs.z;
+            double crossZ = lhs.x * rhs.y - lhs.y * rhs.x;
+            return new Vector3d(crossX, crossY, crossZ);
+        }
     }
 }
 

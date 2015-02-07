@@ -7,11 +7,31 @@ namespace Icosahedron
     {
         public Vector3d[] verticies;
         public Face[] faces;
+        private int level;
 
-        public IcoSphere(int subdivides)
+        public IcoSphere(int level)
         {
-            verticies = IcoCommon.GetVerticesCopy(subdivides);
-            faces = IcoCommon.GetFacesCopy(subdivides);
+            this.level = level;
+            verticies = IcoCommon.GetVerticesCopy(level);
+            faces = IcoCommon.GetFacesCopy(level);
+        }
+
+        public int Level
+        {
+            get
+            {
+                return level;
+            }
+        }
+
+        public int Raycast(Vector3d direction)
+        {
+            return IcoCommon.Raycast(verticies, direction, level, false);
+        }
+
+        public int RaycastNormalized(Vector3d direction)
+        {
+            return IcoCommon.Raycast(verticies, direction, level, true);
         }
     }
 }

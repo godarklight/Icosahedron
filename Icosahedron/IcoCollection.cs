@@ -52,7 +52,7 @@ namespace Icosahedron
                 neighbours = IcoCommon.GetNeighbours(level);
             }
             int[] returnIndex;
-            if (neighbours[index + 6] == -1)
+            if (neighbours[index * 6 + 5] == -1)
             {
                 returnIndex = new int[5];
                 Array.Copy(neighbours, index * 6, returnIndex, 0, 5);
