@@ -32,7 +32,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Vector3d.cs" />
-    <Compile Include="Mesh.cs" />
     <Compile Include="Face.cs" />
     <Compile Include="IcoCollection.cs" />
     <Compile Include="IcoSphere.cs" />

@@ -9,49 +9,63 @@ namespace IcoTest
     {
         public static void Main(string[] args)
         {
+            //Test level
             int icoLevel = 1;
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            IcoSphere icos = new IcoSphere(icoLevel);
-            sw.Stop();
-            Stopwatch sw2 = new Stopwatch();
-            sw2.Start();
-            IcoCollection<int> icoc = new IcoCollection<int>(icoLevel);
-            sw2.Stop();
 
-            for (int i = 0; i < icos.mesh.verticies.Length; i++)
+            //Performance testing
+            Console.WriteLine("===PREFORMANCE TESTING===");
+            for (int i = 0; i < 8; i++)
             {
-                Vector3d thing = icos.mesh.verticies[i];
-                Console.WriteLine(thing);
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                IcoCommon.Precalculate(i);
+                sw.Stop();
+                Stopwatch sw2 = new Stopwatch();
+                sw2.Start();
+                IcoCommon.PrecalculateNeighbours(i);
+                sw2.Stop();
+                Console.WriteLine("Precalculate " + i + ", verticies: " + IcoCommon.VerticiesInLevel(i) + ", faces: " + IcoCommon.FacesInLevel(i) + ", vertex/face time: " + sw.ElapsedMilliseconds + " ms, neighbour time: " + sw2.ElapsedMilliseconds + " ms.");
+            }
+
+            IcoSphere icos = new IcoSphere(icoLevel);
+            Console.WriteLine("Icosphere level: " + icoLevel + ", verticies: " + icos.verticies.Length + ", faces: " + icos.faces.Length);
+
+            //Index testing
+            Console.WriteLine("===INDEX TESTING===");
+            IcoCollection<double> icoc = new IcoCollection<double>(icoLevel);
+            for (int j = 0; j < icoc.Length; j++)
+            {
+                icoc[j] = j;
+            }
+            int k = 0;
+            foreach (double d in icoc)
+            {
+                Console.WriteLine(k++ + " : " + d);
+            }
+
+            Console.WriteLine("===NEIGHBOUR TESTING===");
+            int[] neighbours = IcoCommon.GetNeighbours(icoLevel);
+            for (int i = 0; i < icos.verticies.Length; i++)
+            {
+                Vector3d thing = icos.verticies[i];
+                Console.WriteLine("Index " + i + " : " + thing);
+
                 for (int neighbour = i * 6; neighbour < (i * 6 + 6); neighbour++)
                 {
-                    Console.WriteLine(icos.neighbours[neighbour]);
+                    Console.WriteLine(neighbours[neighbour]);
                 }
                 Console.WriteLine("===");
             }
-            
 
-            Console.WriteLine("Icosphere level: " + icoLevel + ", verticies: " + icos.mesh.verticies.Length + ", faces: " + icos.mesh.triangles.Length + ", sphere time: " + sw.ElapsedMilliseconds + " ms.");
-            Console.WriteLine("Icocollection level: " + icoLevel + ", sphere time: " + sw2.ElapsedMilliseconds + " ms.");
-
-            for (int i = 0; i < 8; i++)
+            //Neighbour testing
+            for (int i = 0; i < icoc.Length; i++)
             {
-                Stopwatch sw3 = new Stopwatch();
-                sw3.Start();
-                IcoSphere icoS = new IcoSphere(i);
-                sw3.Stop();
-                Console.WriteLine(i + " : " + icoS.mesh.verticies.Length + " : " + icoS.mesh.triangles.Length + ", time: " + sw3.ElapsedMilliseconds);
-            }
-
-            IcoCollection<double> icoc2 = new IcoCollection<double>(icoLevel);
-            for (int j = 0; j < icoc2.Length; j++)
-            {
-                icoc2[j] = j;
-            }
-            int k = 0;
-            foreach (double d in icoc2)
-            {
-                Console.WriteLine(k++ + " : " + d);
+                Console.WriteLine("Index " + i);
+                foreach (double d in icoc.GetNeighbours(i))
+                {
+                    Console.WriteLine(d);
+                }
+                Console.WriteLine("===");
             }
         }
     }
