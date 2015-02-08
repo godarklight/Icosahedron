@@ -13,7 +13,7 @@ namespace Icosahedron
         public IcoCollection(int level)
         {
             this.level = level;
-            points = IcoCommon.VerticiesInLevel(level);
+            points = (int)IcoCommon.VerticiesInLevel(level);
             values = new T[points];
         }
 

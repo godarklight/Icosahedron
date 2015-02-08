@@ -27,13 +27,10 @@ namespace Icosahedron
                 }
                 else
                 {
-                    Vector3d[] oldVerticies = verticies;
                     Face[][] oldFaces = faces;
-                    verticies = new Vector3d[VerticiesInLevel(calculateLevel)];
                     faces = new Face[calculateLevel + 1][];
-                    Array.Copy(oldVerticies, 0, verticies, 0, oldVerticies.Length);
                     Array.Copy(oldFaces, 0, faces, 0, oldFaces.Length);
-                    Subdivide(calculateLevel, oldVerticies.Length);
+                    Subdivide(calculateLevel);
                 }
             }
         }
@@ -84,19 +81,34 @@ namespace Icosahedron
             return neighbours[level];
         }
 
-        public static int VerticiesInLevel(int level)
+        public static long VerticiesInLevel(int level)
         {
-            return 10 * (int)Math.Pow(4, level) + 2;
+            return 10 * ipow(4, level) + 2;
         }
 
-        public static int FacesInLevel(int level)
+        public static long FacesInLevel(int level)
         {
-            return 20 * (int)Math.Pow(4, level);
+            return 20 * ipow(4, level);
         }
 
-        public static int EdgesInLevel(int level)
+        public static long EdgesInLevel(int level)
         {
-            return 30 * (int)Math.Pow(4, level);
+            return 30 * ipow(4, level);
+        }
+
+        private static long ipow(long baseVal, long exp)
+        {
+            long result = 1;
+            while (exp > 0)
+            {
+                if ((exp & 1) == 1)
+                {
+                    result *= baseVal;
+                }
+                exp >>= 1;
+                baseVal *= baseVal;
+            }
+            return result;
         }
 
         public static int Raycast(Vector3d direction, int level, bool normalize)
@@ -171,44 +183,81 @@ namespace Icosahedron
             return currentVertexID;
         }
 
-        private static void Subdivide(int level, int oldVertexCount)
+        private static void Subdivide(int level)
         {
-            //<Vector3d>(verticies[level - 1]);
-            Face[] newFaces = new Face[FacesInLevel(level)];
-            int newVertexPos = oldVertexCount;
-            int newFacePos = 0;
-            //Copy new vertex array
+            List<Vector3d> newVertex = new List<Vector3d>(verticies);
+            List<Face> newFaces = new List<Face>();
             Dictionary<ulong, int> meshCache = new Dictionary<ulong, int>();
             Face[] oldLevel = faces[level - 1];
             for (int faceIndex = 0; faceIndex < oldLevel.Length; faceIndex++)
             {
                 Face face = oldLevel[faceIndex];
-                ulong cacheID12;
-                ulong cacheID13;
-                ulong cacheID23;
+                Vector3d point1Vector = verticies[face.point1];
+                Vector3d point2Vector = verticies[face.point2];
+                Vector3d point3Vector = verticies[face.point3];
+                //Too slow to be useful
+                /*
+                CachePair cacheID12;
+                CachePair cacheID13;
+                CachePair cacheID23;
                 if (face.point1 < face.point2)
                 {
-                    cacheID12 = (ulong)face.point1 << 32 | (uint)face.point2;
+                    cacheID12 = new CachePair(face.point1, face.point2);
                 }
                 else
                 {
-                    cacheID12 = (ulong)face.point2 << 32 | (uint)face.point1;
+                    cacheID12 = new CachePair(face.point2, face.point1);
                 }
                 if (face.point1 < face.point3)
                 {
-                    cacheID13 = (ulong)face.point1 << 32 | (uint)face.point3;
+                    cacheID13 = new CachePair(face.point1, face.point3);
                 }
                 else
                 {
-                    cacheID13 = (ulong)face.point3 << 32 | (uint)face.point1;
+                    cacheID13 = new CachePair(face.point3, face.point1);
                 }
                 if (face.point2 < face.point3)
                 {
-                    cacheID23 = (ulong)face.point2 << 32 | (uint)face.point3;
+                    cacheID23 = new CachePair(face.point2, face.point3);
                 }
                 else
                 {
-                    cacheID23 = (ulong)face.point3 << 32 | (uint)face.point2;
+                    cacheID23 = new CachePair(face.point3, face.point2);
+                }
+                */
+                ulong cacheID12;
+                ulong cacheID13;
+                ulong cacheID23;
+                //Hash code problem workaround
+                if (face.point1 < face.point2)
+                {
+                    uint bigPoint = (uint)face.point2;
+                    cacheID12 = (ulong)face.point1 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
+                }
+                else
+                {
+                    uint bigPoint = (uint)face.point1;
+                    cacheID12 = (ulong)face.point2 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
+                }
+                if (face.point1 < face.point3)
+                {
+                    uint bigPoint = (uint)face.point3;
+                    cacheID13 = (ulong)face.point1 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
+                }
+                else
+                {
+                    uint bigPoint = (uint)face.point1;
+                    cacheID13 = (ulong)face.point3 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
+                }
+                if (face.point2 < face.point3)
+                {
+                    uint bigPoint = (uint)face.point3;
+                    cacheID23 = (ulong)face.point2 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
+                }
+                else
+                {
+                    uint bigPoint = (uint)face.point2;
+                    cacheID23 = (ulong)face.point3 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
                 }
                 int newPoint1;
                 int newPoint2;
@@ -216,37 +265,34 @@ namespace Icosahedron
                 //Add or select the vertex between point 12
                 if (!meshCache.TryGetValue(cacheID12, out newPoint1))
                 {
-                    verticies[newVertexPos] = (verticies[face.point1] + verticies[face.point2]).normalized;
-                    newPoint1 = newVertexPos;
-                    newVertexPos++;
-                    meshCache[cacheID12] = newPoint1;
+                    newPoint1 = newVertex.Count;
+                    newVertex.Add((point1Vector + point2Vector).normalized);
+                    meshCache.Add(cacheID12, newPoint1);
                 }
 
                 //Add or select the vertex between point 13
                 if (!meshCache.TryGetValue(cacheID13, out newPoint2))
                 {
-                    verticies[newVertexPos] = (verticies[face.point1] + verticies[face.point3]).normalized;
-                    newPoint2 = newVertexPos;
-                    newVertexPos++;
-                    meshCache[cacheID13] = newPoint2;
+                    newPoint2 = newVertex.Count;
+                    newVertex.Add((point1Vector + point3Vector).normalized);
+                    meshCache.Add(cacheID13, newPoint2);
                 }
 
                 //Add or select the vertex between point 23
                 if (!meshCache.TryGetValue(cacheID23, out newPoint3))
                 {
-                    verticies[newVertexPos] = (verticies[face.point2] + verticies[face.point3]).normalized;
-                    newPoint3 = newVertexPos;
-                    newVertexPos++;
-                    meshCache[cacheID23] = newPoint3;
+                    newPoint3 = newVertex.Count;
+                    newVertex.Add((point2Vector + point3Vector).normalized);
+                    meshCache.Add(cacheID23, newPoint3);
                 }
                 //Add the faces
-                newFaces[newFacePos] = new Face(face.point1, newPoint1, newPoint2);
-                newFaces[newFacePos + 1] = new Face(face.point2, newPoint3, newPoint1);
-                newFaces[newFacePos + 2] = new Face(face.point3, newPoint2, newPoint3);
-                newFaces[newFacePos + 3] = new Face(newPoint3, newPoint2, newPoint1);
-                newFacePos += 4;
+                newFaces.Add(new Face(face.point1, newPoint1, newPoint2));
+                newFaces.Add(new Face(face.point2, newPoint3, newPoint1));
+                newFaces.Add(new Face(face.point3, newPoint2, newPoint3));
+                newFaces.Add(new Face(newPoint3, newPoint2, newPoint1));
             }
-            faces[level] = newFaces;
+            verticies = newVertex.ToArray();
+            faces[level] = newFaces.ToArray();
         }
 
         private static Vector3d[] GetInitialVerticies()
@@ -371,6 +417,36 @@ namespace Icosahedron
                 storePos[pointSrc] = storeIndex + 1;
             }
         }
+
+        //Too slow to be useful
+        /*
+        private struct CachePair
+        {
+            public readonly int smallIndex;
+            public readonly int bigIndex;
+
+            public CachePair(int smallIndex, int bigIndex)
+            {
+                this.smallIndex = smallIndex;
+                this.bigIndex = bigIndex;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is CachePair)
+                {
+                    CachePair theirObject = (CachePair)obj;
+                    return smallIndex == theirObject.smallIndex && bigIndex == theirObject.bigIndex;
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return smallIndex ^ bigIndex;
+            }
+        }
+        */
     }
 }
 

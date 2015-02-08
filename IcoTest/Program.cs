@@ -10,14 +10,24 @@ namespace IcoTest
         public static void Main(string[] args)
         {
             //Test level
-            int icoLevel = 1;
-            int raycastLoops = 10000;
-            bool neighbourTest = true;
-            bool indexTest = true;
+            int icoLevel = 10;
+            int raycastLoops = 100000;
+            bool neighbourTest = false;
+            bool indexTest = false;
+
+            //Info
+            Console.WriteLine("===ICOSAHEDRON INFO===");
+            for (int i = 0; i < 20; i++)
+            {
+                long vert = IcoCommon.VerticiesInLevel(i);
+                long edge = IcoCommon.EdgesInLevel(i);
+                long faces = IcoCommon.FacesInLevel(i);
+                Console.WriteLine("Level: " + i + ", verticies: " + vert + ", edges: " + edge + ", faces: " + faces);
+            }
 
             //Performance testing
             Console.WriteLine("===PREFORMANCE TESTING===");
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i <= icoLevel; i++)
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
@@ -87,14 +97,15 @@ namespace IcoTest
             Vector3d[] copyVertex = IcoCommon.GetVerticesCopy(7);
 
             //Raycast
-            Console.WriteLine("===LINEAR RAYCAST TESTING (Not library function)===");
-            Console.WriteLine("Source Direction: " + dirVector);
+
+
             int closestVertexID = 0;
             Vector3d closestVertex = copyVertex[0];
             double closestDot = double.NegativeInfinity;
             Stopwatch swRaycast = new Stopwatch();
-            swRaycast.Start();
-
+            /*
+            Console.WriteLine("===LINEAR RAYCAST TESTING (Not library function)===");
+            Console.WriteLine("Source Direction: " + dirVector);
             for (int i = 0; i < 8; i++)
             {
                 swRaycast.Reset();
@@ -118,10 +129,11 @@ namespace IcoTest
                 swRaycast.Stop();
                 Console.WriteLine("Level: " + i + ", Closest: " + closestVertexID + ", Direction: " + closestVertex + ", Dot: " + closestDot + ", time: " + swRaycast.ElapsedMilliseconds + " ms.");
             }
+            */
 
             Console.WriteLine("===TREE RAYCAST TESTING===");
             Console.WriteLine("Source Direction: " + dirVector);
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i <= icoLevel; i++)
             {
                 swRaycast.Reset();
                 swRaycast.Start();
