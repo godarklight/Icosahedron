@@ -97,40 +97,10 @@ namespace IcoTest
             Vector3d[] copyVertex = IcoCommon.GetVerticesCopy(7);
 
             //Raycast
-
-
             int closestVertexID = 0;
             Vector3d closestVertex = copyVertex[0];
             double closestDot = double.NegativeInfinity;
             Stopwatch swRaycast = new Stopwatch();
-            /*
-            Console.WriteLine("===LINEAR RAYCAST TESTING (Not library function)===");
-            Console.WriteLine("Source Direction: " + dirVector);
-            for (int i = 0; i < 8; i++)
-            {
-                swRaycast.Reset();
-                swRaycast.Start();
-                for (int currentLoop = 0; currentLoop < raycastLoops; currentLoop++)
-                {
-
-                    int thisLevel = IcoCommon.VerticiesInLevel(i);
-                    for (int j = closestVertexID; j < thisLevel; j++)
-                    {
-                        Vector3d searchVertex = copyVertex[j];
-                        double searchDot = Vector3d.Dot(dirVector, searchVertex);
-                        if (searchDot > closestDot)
-                        {
-                            closestVertexID = j;
-                            closestVertex = searchVertex;
-                            closestDot = searchDot;
-                        }
-                    }
-                }
-                swRaycast.Stop();
-                Console.WriteLine("Level: " + i + ", Closest: " + closestVertexID + ", Direction: " + closestVertex + ", Dot: " + closestDot + ", time: " + swRaycast.ElapsedMilliseconds + " ms.");
-            }
-            */
-
             Console.WriteLine("===TREE RAYCAST TESTING===");
             Console.WriteLine("Source Direction: " + dirVector);
             for (int i = 0; i <= icoLevel; i++)
@@ -141,8 +111,8 @@ namespace IcoTest
                 {
                     closestVertexID = IcoCommon.Raycast(dirVector, i, false);
                     closestVertex = copyVertex[closestVertexID];
-                    closestDot = Vector3d.Dot(dirVector, closestVertex);
                 }
+                closestDot = Vector3d.Dot(dirVector, closestVertex);
                 swRaycast.Stop();
                 Console.WriteLine("Level: " + i + ", Closest: " + closestVertexID + ", Direction: " + closestVertex + ", Dot: " + closestDot + ", time: " + swRaycast.ElapsedMilliseconds + " ms.");
             }

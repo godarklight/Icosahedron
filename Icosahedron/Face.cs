@@ -4,9 +4,9 @@ namespace Icosahedron
 {
     public struct Face
     {
-        public int point1;
-        public int point2;
-        public int point3;
+        public readonly int point1;
+        public readonly int point2;
+        public readonly int point3;
 
         public Face(int point1, int point2, int point3)
         {

@@ -5,9 +5,9 @@ namespace Icosahedron
 {
     public static class IcoCommon
     {
-        internal static Vector3d[] verticies;
-        internal static Face[][] faces;
-        internal static int[][] neighbours;
+        private static List<Vector3d> verticies = new List<Vector3d>();
+        private static List<List<Face>> faces = new List<List<Face>>();
+        private static List<List<int>> neighbours = new List<List<int>>();
         private static int calculateLevel = -1;
         private static int calculateLevelNeighbours = -1;
 
@@ -18,18 +18,11 @@ namespace Icosahedron
                 calculateLevel++;
                 if (calculateLevel == 0)
                 {
-                    verticies = new Vector3d[1];
-                    faces = new Face[1][];
-                    neighbours = new int[1][];
                     verticies = GetInitialVerticies();
-                    faces[0] = GetInitialFaces();
-                    CalculateNeighbours(0);
+                    faces.Add(GetInitialFaces());
                 }
                 else
                 {
-                    Face[][] oldFaces = faces;
-                    faces = new Face[calculateLevel + 1][];
-                    Array.Copy(oldFaces, 0, faces, 0, oldFaces.Length);
                     Subdivide(calculateLevel);
                 }
             }
@@ -40,12 +33,6 @@ namespace Icosahedron
             while (calculateLevelNeighbours < level)
             {
                 Precalculate(level);
-                int[][] oldNeighbours = neighbours;
-                neighbours = new int[calculateLevel + 1][];
-                for (int i = 0; i < oldNeighbours.Length; i++)
-                {
-                    neighbours[i] = oldNeighbours[i];
-                }
                 CalculateNeighbours(calculateLevel);
                 calculateLevelNeighbours++;
             }
@@ -55,30 +42,64 @@ namespace Icosahedron
         {
             Precalculate(level);
             Vector3d[] retArray = new Vector3d[VerticiesInLevel(level)];
-            Array.Copy(verticies, 0, retArray, 0, retArray.Length);
+            for (int i = 0; i < retArray.Length; i++)
+            {
+                retArray[i] = verticies[i];
+            }
             return retArray;
         }
 
         public static Face[] GetFacesCopy(int level)
         {
             Precalculate(level);
-            Face[] retArray = new Face[faces[level].Length];
-            Array.Copy(faces[level], 0, retArray, 0, retArray.Length);
-            return retArray;
+            return faces[level].ToArray();
         }
 
         public static int[] GetNeighboursCopy(int level)
         {
             PrecalculateNeighbours(level);
-            int[] retArray = new int[neighbours[level].Length];
-            Array.Copy(neighbours[level], 0, retArray, 0, retArray.Length);
-            return retArray;
+            return neighbours[level].ToArray();
         }
 
-        public static int[] GetNeighbours(int level)
+        public static List<Vector3d> GetVerticiesRaw(int level)
+        {
+            Precalculate(level);
+            return verticies;
+        }
+
+        public static List<Face> GetFacesRaw(int level)
+        {
+            Precalculate(level);
+            return faces[level];
+        }
+
+        public static List<int> GetNeighboursRaw(int level)
         {
             PrecalculateNeighbours(level);
             return neighbours[level];
+        }
+
+        public static int[] GetNeighboursIndex(int level, int index)
+        {
+            PrecalculateNeighbours(level);
+            int[] returnIndex;
+            if (neighbours[level][index * 6 + 5] == -1)
+            {
+                returnIndex = new int[5];
+                for (int i = 0; i < 5; i++)
+                {
+                    returnIndex[i] = neighbours[level][index * 6 + i];
+                }
+            }
+            else
+            {
+                returnIndex = new int[6];
+                for (int i = 0; i < 6; i++)
+                {
+                    returnIndex[i] = neighbours[level][index * 6 + i];
+                }
+            }
+            return returnIndex;
         }
 
         public static long VerticiesInLevel(int level)
@@ -113,11 +134,6 @@ namespace Icosahedron
 
         public static int Raycast(Vector3d direction, int level, bool normalize)
         {
-            return Raycast(verticies, direction, level, normalize);
-        }
-
-        public static int Raycast(Vector3d[] raycastVerticies, Vector3d direction, int level, bool normalize)
-        {
             if (normalize)
             {
                 direction = direction.normalized;
@@ -125,7 +141,7 @@ namespace Icosahedron
             Precalculate(level);
             PrecalculateNeighbours(level);
             int currentVertexID = 0;
-            Vector3d currentVertex = raycastVerticies[currentVertexID];
+            Vector3d currentVertex = verticies[currentVertexID];
             double currentDot = Vector3d.Dot(direction, currentVertex);
             if (normalize)
             {
@@ -134,7 +150,6 @@ namespace Icosahedron
             //Search level
             for (int searchLevel = 0; searchLevel <= level; searchLevel++)
             {
-                int[] currentNeighbours = neighbours[searchLevel];
                 //Walking state
                 int newVertexID = currentVertexID;
                 Vector3d newVertex = currentVertex;
@@ -144,7 +159,7 @@ namespace Icosahedron
                 {
                     for (int searchNeighbour = 0; searchNeighbour < 6; searchNeighbour++)
                     {
-                        int neighbourID = currentNeighbours[currentVertexID * 6 + searchNeighbour];
+                        int neighbourID = neighbours[searchLevel][currentVertexID * 6 + searchNeighbour];
                         if (neighbourID == -1)
                         {
                             break;
@@ -185,104 +200,42 @@ namespace Icosahedron
 
         private static void Subdivide(int level)
         {
-            List<Vector3d> newVertex = new List<Vector3d>(verticies);
-            List<Face> newFaces = new List<Face>();
-            Dictionary<ulong, int> meshCache = new Dictionary<ulong, int>();
-            Face[] oldLevel = faces[level - 1];
-            for (int faceIndex = 0; faceIndex < oldLevel.Length; faceIndex++)
+            List<Face> newFaces = new List<Face>((int)FacesInLevel(level));
+            Dictionary<CachePair, int> meshCache = new Dictionary<CachePair, int>((int)EdgesInLevel(level));
+            List<Face> oldLevel = faces[level - 1];
+            for (int faceIndex = 0; faceIndex < oldLevel.Count; faceIndex++)
             {
                 Face face = oldLevel[faceIndex];
                 Vector3d point1Vector = verticies[face.point1];
                 Vector3d point2Vector = verticies[face.point2];
                 Vector3d point3Vector = verticies[face.point3];
-                //Too slow to be useful
-                /*
-                CachePair cacheID12;
-                CachePair cacheID13;
-                CachePair cacheID23;
-                if (face.point1 < face.point2)
-                {
-                    cacheID12 = new CachePair(face.point1, face.point2);
-                }
-                else
-                {
-                    cacheID12 = new CachePair(face.point2, face.point1);
-                }
-                if (face.point1 < face.point3)
-                {
-                    cacheID13 = new CachePair(face.point1, face.point3);
-                }
-                else
-                {
-                    cacheID13 = new CachePair(face.point3, face.point1);
-                }
-                if (face.point2 < face.point3)
-                {
-                    cacheID23 = new CachePair(face.point2, face.point3);
-                }
-                else
-                {
-                    cacheID23 = new CachePair(face.point3, face.point2);
-                }
-                */
-                ulong cacheID12;
-                ulong cacheID13;
-                ulong cacheID23;
-                //Hash code problem workaround
-                if (face.point1 < face.point2)
-                {
-                    uint bigPoint = (uint)face.point2;
-                    cacheID12 = (ulong)face.point1 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
-                }
-                else
-                {
-                    uint bigPoint = (uint)face.point1;
-                    cacheID12 = (ulong)face.point2 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
-                }
-                if (face.point1 < face.point3)
-                {
-                    uint bigPoint = (uint)face.point3;
-                    cacheID13 = (ulong)face.point1 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
-                }
-                else
-                {
-                    uint bigPoint = (uint)face.point1;
-                    cacheID13 = (ulong)face.point3 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
-                }
-                if (face.point2 < face.point3)
-                {
-                    uint bigPoint = (uint)face.point3;
-                    cacheID23 = (ulong)face.point2 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
-                }
-                else
-                {
-                    uint bigPoint = (uint)face.point2;
-                    cacheID23 = (ulong)face.point3 << 32 | (bigPoint & 0xFFFF0000) >> 16 | (bigPoint & 0xFFFF) << 16;
-                }
+                CachePair cacheID12 = new CachePair(face.point1, face.point2);
+                CachePair cacheID13 = new CachePair(face.point1, face.point3);
+                CachePair cacheID23 = new CachePair(face.point2, face.point3);
                 int newPoint1;
                 int newPoint2;
                 int newPoint3;
                 //Add or select the vertex between point 12
                 if (!meshCache.TryGetValue(cacheID12, out newPoint1))
                 {
-                    newPoint1 = newVertex.Count;
-                    newVertex.Add((point1Vector + point2Vector).normalized);
+                    newPoint1 = verticies.Count;
+                    verticies.Add((point1Vector + point2Vector).normalized);
                     meshCache.Add(cacheID12, newPoint1);
                 }
 
                 //Add or select the vertex between point 13
                 if (!meshCache.TryGetValue(cacheID13, out newPoint2))
                 {
-                    newPoint2 = newVertex.Count;
-                    newVertex.Add((point1Vector + point3Vector).normalized);
+                    newPoint2 = verticies.Count;
+                    verticies.Add((point1Vector + point3Vector).normalized);
                     meshCache.Add(cacheID13, newPoint2);
                 }
 
                 //Add or select the vertex between point 23
                 if (!meshCache.TryGetValue(cacheID23, out newPoint3))
                 {
-                    newPoint3 = newVertex.Count;
-                    newVertex.Add((point2Vector + point3Vector).normalized);
+                    newPoint3 = verticies.Count;
+                    verticies.Add((point2Vector + point3Vector).normalized);
                     meshCache.Add(cacheID23, newPoint3);
                 }
                 //Add the faces
@@ -291,20 +244,15 @@ namespace Icosahedron
                 newFaces.Add(new Face(face.point3, newPoint2, newPoint3));
                 newFaces.Add(new Face(newPoint3, newPoint2, newPoint1));
             }
-            verticies = newVertex.ToArray();
-            faces[level] = newFaces.ToArray();
+            faces.Add(newFaces);
         }
 
-        private static Vector3d[] GetInitialVerticies()
+        private static List<Vector3d> GetInitialVerticies()
         {
             //Definition:
             //2 points at the poles
             //10 points located around the equator 36 degrees apart, that alternate +/- atan(0.5) inclination
-            Vector3d[] returnPoints = new Vector3d[12];
-            //Poles
-            returnPoints[0] = new Vector3d(0, 1, 0);
-            returnPoints[11] = new Vector3d(0, -1, 0);
-            //Points
+            List<Vector3d> returnPoints = new List<Vector3d>(12);
 
             //Get equator inclination and z value offset
             double equatorInc = Math.PI / 2d - Math.Atan(0.5);
@@ -316,77 +264,64 @@ namespace Icosahedron
             double Sin36 = Math.Sin(equatorInc) * Math.Sin(Math.PI / 10d);
             double Sin72 = Math.Sin(equatorInc) * Math.Sin(Math.PI / 5d);
             //Build points
-            returnPoints[1] = new Vector3d(SinInc, equatorOffset, 0);
-            returnPoints[2] = new Vector3d(Cos72, -equatorOffset, Sin72);
-            returnPoints[3] = new Vector3d(Sin36, equatorOffset, Cos36);
-            returnPoints[4] = new Vector3d(-Sin36, -equatorOffset, Cos36);
-            returnPoints[5] = new Vector3d(-Cos72, equatorOffset, Sin72);
-            returnPoints[6] = new Vector3d(-SinInc, -equatorOffset, 0);
-            returnPoints[7] = new Vector3d(-Cos72, equatorOffset, -Sin72);
-            returnPoints[8] = new Vector3d(-Sin36, -equatorOffset, -Cos36);
-            returnPoints[9] = new Vector3d(Sin36, equatorOffset, -Cos36);
-            returnPoints[10] = new Vector3d(Cos72, -equatorOffset, -Sin72);
+            returnPoints.Add(new Vector3d(0, 1, 0));
+            returnPoints.Add(new Vector3d(SinInc, equatorOffset, 0));
+            returnPoints.Add(new Vector3d(Cos72, -equatorOffset, Sin72));
+            returnPoints.Add(new Vector3d(Sin36, equatorOffset, Cos36));
+            returnPoints.Add(new Vector3d(-Sin36, -equatorOffset, Cos36));
+            returnPoints.Add(new Vector3d(-Cos72, equatorOffset, Sin72));
+            returnPoints.Add(new Vector3d(-SinInc, -equatorOffset, 0));
+            returnPoints.Add(new Vector3d(-Cos72, equatorOffset, -Sin72));
+            returnPoints.Add(new Vector3d(-Sin36, -equatorOffset, -Cos36));
+            returnPoints.Add(new Vector3d(Sin36, equatorOffset, -Cos36));
+            returnPoints.Add(new Vector3d(Cos72, -equatorOffset, -Sin72));
+            returnPoints.Add(new Vector3d(0, -1, 0));
             return returnPoints;
         }
 
-        private static Face[] GetInitialFaces()
+        private static List<Face> GetInitialFaces()
         {
-            Face[] returnFaces = new Face[20];
+            List<Face> returnFaces = new List<Face>(20);
             //Point 0
-            returnFaces[0] = new Face(0, 3, 1);
-            returnFaces[1] = new Face(0, 5, 3);
-            returnFaces[2] = new Face(0, 7, 5);
-            returnFaces[3] = new Face(0, 9, 7);
-            returnFaces[4] = new Face(0, 1, 9);
+            returnFaces.Add(new Face(0, 3, 1));
+            returnFaces.Add(new Face(0, 5, 3));
+            returnFaces.Add(new Face(0, 7, 5));
+            returnFaces.Add(new Face(0, 9, 7));
+            returnFaces.Add(new Face(0, 1, 9));
 
             //Middle
-            returnFaces[5] = new Face(1, 3, 2);
-            returnFaces[6] = new Face(2, 3, 4);
-            returnFaces[7] = new Face(3, 5, 4);
-            returnFaces[8] = new Face(4, 5, 6);
-            returnFaces[9] = new Face(5, 7, 6);
-            returnFaces[10] = new Face(6, 7, 8);
-            returnFaces[11] = new Face(7, 9, 8);
-            returnFaces[12] = new Face(8, 9, 10);
-            returnFaces[13] = new Face(9, 1, 10);
-            returnFaces[14] = new Face(10, 1, 2);
+            returnFaces.Add(new Face(1, 3, 2));
+            returnFaces.Add(new Face(2, 3, 4));
+            returnFaces.Add(new Face(3, 5, 4));
+            returnFaces.Add(new Face(4, 5, 6));
+            returnFaces.Add(new Face(5, 7, 6));
+            returnFaces.Add(new Face(6, 7, 8));
+            returnFaces.Add(new Face(7, 9, 8));
+            returnFaces.Add(new Face(8, 9, 10));
+            returnFaces.Add(new Face(9, 1, 10));
+            returnFaces.Add(new Face(10, 1, 2));
 
             //Point 11
-            returnFaces[15] = new Face(11, 2, 4);
-            returnFaces[16] = new Face(11, 4, 6);
-            returnFaces[17] = new Face(11, 6, 8);
-            returnFaces[18] = new Face(11, 8, 10);
-            returnFaces[19] = new Face(11, 10, 2);
+            returnFaces.Add(new Face(11, 2, 4));
+            returnFaces.Add(new Face(11, 4, 6));
+            returnFaces.Add(new Face(11, 6, 8));
+            returnFaces.Add(new Face(11, 8, 10));
+            returnFaces.Add(new Face(11, 10, 2));
 
             return returnFaces;
         }
 
         private static void CalculateNeighbours(int level)
         {
-            int maxVertex = 0;
-            Face[] currentFaces = faces[level];
-            foreach (Face f in currentFaces)
-            {
-                if (f.point1 > maxVertex)
-                {
-                    maxVertex = f.point1;
-                }
-                if (f.point2 > maxVertex)
-                {
-                    maxVertex = f.point2;
-                }
-                if (f.point3 > maxVertex)
-                {
-                    maxVertex = f.point3;
-                }
-            }
-            int[] newNeighbours = new int[(maxVertex + 1) * 6];
-            int[] storePos = new int[maxVertex + 1];
-            for (int i = 0; i < newNeighbours.Length; i++)
+            long vertInLevel = VerticiesInLevel(level);
+            List<Face> currentFaces = faces[level];
+            int[] newNeighbours = new int[vertInLevel * 6];
+            int[] storePos = new int[vertInLevel];
+            for (int i = 0; i < vertInLevel * 6; i++)
             {
                 newNeighbours[i] = -1;
             }
-            for (int i = 0; i < currentFaces.Length; i++)
+            for (int i = 0; i < currentFaces.Count; i++)
             {
                 Face currentFace = currentFaces[i];
                 LinkPoints(newNeighbours, storePos, currentFace.point1, currentFace.point2);
@@ -396,7 +331,7 @@ namespace Icosahedron
                 LinkPoints(newNeighbours, storePos, currentFace.point3, currentFace.point1);
                 LinkPoints(newNeighbours, storePos, currentFace.point3, currentFace.point2);
             }
-            neighbours[level] = newNeighbours;
+            neighbours.Add(new List<int>(newNeighbours));
         }
 
         private static void LinkPoints(int[] neighbours, int[] storePos, int pointSrc, int pointDst)
@@ -418,17 +353,23 @@ namespace Icosahedron
             }
         }
 
-        //Too slow to be useful
-        /*
         private struct CachePair
         {
-            public readonly int smallIndex;
-            public readonly int bigIndex;
+            public readonly uint smallIndex;
+            public readonly uint bigIndex;
 
-            public CachePair(int smallIndex, int bigIndex)
+            public CachePair(int index1, int index2)
             {
-                this.smallIndex = smallIndex;
-                this.bigIndex = bigIndex;
+                if (index1 < index2)
+                {
+                    smallIndex = (uint)index1;
+                    bigIndex = (uint)index2;
+                }
+                else
+                {
+                    smallIndex = (uint)index2;
+                    bigIndex = (uint)index1;
+                }
             }
 
             public override bool Equals(object obj)
@@ -443,10 +384,10 @@ namespace Icosahedron
 
             public override int GetHashCode()
             {
-                return smallIndex ^ bigIndex;
+                uint bitWrap = (bigIndex & 0xFFFF0000) >> 16 | (bigIndex & 0xFFFF) << 16;
+                return (int)(smallIndex ^ bitWrap);
             }
         }
-        */
     }
 }
 

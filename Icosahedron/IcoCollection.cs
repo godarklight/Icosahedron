@@ -8,7 +8,6 @@ namespace Icosahedron
         T[] values;
         private int points = 0;
         private int level;
-        private int[] neighbours = null;
 
         public IcoCollection(int level)
         {
@@ -47,38 +46,19 @@ namespace Icosahedron
 
         public int[] GetNeighboursIndex(int index)
         {
-            if (neighbours == null)
-            {
-                neighbours = IcoCommon.GetNeighbours(level);
-            }
-            int[] returnIndex;
-            if (neighbours[index * 6 + 5] == -1)
-            {
-                returnIndex = new int[5];
-                Array.Copy(neighbours, index * 6, returnIndex, 0, 5);
-            }
-            else
-            {
-                returnIndex = new int[6];
-                Array.Copy(neighbours, index * 6, returnIndex, 0, 6);
-            }
-            return returnIndex;
+            return IcoCommon.GetNeighboursIndex(level, index);
         }
 
         public IEnumerable<T> GetNeighbours(int index)
         {
-            if (neighbours == null)
+            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6]];
+            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 1]];
+            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 2]];
+            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 3]];
+            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 4]];
+            if (IcoCommon.GetNeighboursRaw(level)[index * 6 + 5] != -1)
             {
-                neighbours = IcoCommon.GetNeighbours(level);
-            }
-            yield return values[neighbours[index * 6]];
-            yield return values[neighbours[index * 6 + 1]];
-            yield return values[neighbours[index * 6 + 2]];
-            yield return values[neighbours[index * 6 + 3]];
-            yield return values[neighbours[index * 6 + 4]];
-            if (neighbours[index * 6 + 5] != -1)
-            {
-                yield return values[neighbours[index * 6 + 5]];
+                yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 5]];
             }
         }
 

@@ -26,12 +26,12 @@ namespace Icosahedron
 
         public int Raycast(Vector3d direction)
         {
-            return IcoCommon.Raycast(verticies, direction, level, false);
+            return IcoCommon.Raycast(direction, level, false);
         }
 
         public int RaycastNormalized(Vector3d direction)
         {
-            return IcoCommon.Raycast(verticies, direction, level, true);
+            return IcoCommon.Raycast(direction, level, true);
         }
     }
 }
