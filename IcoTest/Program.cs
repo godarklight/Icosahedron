@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Icosahedron;
@@ -10,7 +11,7 @@ namespace IcoTest
         public static void Main(string[] args)
         {
             //Test level
-            int icoLevel = 10;
+            int icoLevel = 8;
             int raycastLoops = 100000;
             bool neighbourTest = false;
             bool indexTest = false;
@@ -35,9 +36,13 @@ namespace IcoTest
                 sw.Stop();
                 Stopwatch sw2 = new Stopwatch();
                 sw2.Start();
-                IcoCommon.PrecalculateNeighbours(i);
+                IcoCommon.PrecalculateNeighboursVertex(i);
                 sw2.Stop();
-                Console.WriteLine("Precalculate " + i + ", verticies: " + IcoCommon.VerticiesInLevel(i) + ", faces: " + IcoCommon.FacesInLevel(i) + ", vertex/face time: " + sw.ElapsedMilliseconds + " ms, neighbour time: " + sw2.ElapsedMilliseconds + " ms.");
+                Stopwatch sw3 = new Stopwatch();
+                sw3.Start();
+                IcoCommon.PrecalculateNeighboursFaces(i);
+                sw3.Stop();
+                Console.WriteLine("Precalculate " + i + ", verticies: " + IcoCommon.VerticiesInLevel(i) + ", faces: " + IcoCommon.FacesInLevel(i) + ", vertex/face time: " + sw.ElapsedMilliseconds + " ms, vertex neighbour time: " + sw2.ElapsedMilliseconds + " ms, face neighbour time: " + sw3.ElapsedMilliseconds + " ms.");
             }
 
             IcoSphere icos = new IcoSphere(icoLevel);
@@ -94,27 +99,49 @@ namespace IcoTest
 
             //Raycast setup common
             Vector3d dirVector = new Vector3d(1, 1, 1).normalized;
-            Vector3d[] copyVertex = IcoCommon.GetVerticesCopy(7);
+            List<Vector3d> rawVertex = IcoCommon.GetVerticiesRaw(icoLevel);
 
-            //Raycast
-            int closestVertexID = 0;
-            Vector3d closestVertex = copyVertex[0];
-            double closestDot = double.NegativeInfinity;
-            Stopwatch swRaycast = new Stopwatch();
-            Console.WriteLine("===TREE RAYCAST TESTING===");
+            //Raycast vertex
+            Console.WriteLine("===TREE RAYCAST VERTEX TESTING===");
             Console.WriteLine("Source Direction: " + dirVector);
             for (int i = 0; i <= icoLevel; i++)
             {
-                swRaycast.Reset();
+                int closestVertexID = 0;
+                Stopwatch swRaycast = new Stopwatch();
                 swRaycast.Start();
                 for (int currentLoop = 0; currentLoop < raycastLoops; currentLoop++)
                 {
-                    closestVertexID = IcoCommon.Raycast(dirVector, i, false);
-                    closestVertex = copyVertex[closestVertexID];
+                    closestVertexID = IcoCommon.RaycastVertex(dirVector, i, false);
                 }
-                closestDot = Vector3d.Dot(dirVector, closestVertex);
                 swRaycast.Stop();
-                Console.WriteLine("Level: " + i + ", Closest: " + closestVertexID + ", Direction: " + closestVertex + ", Dot: " + closestDot + ", time: " + swRaycast.ElapsedMilliseconds + " ms.");
+                Vector3d closestVertex = rawVertex[closestVertexID];
+                double error = (closestVertex - dirVector).magnitude;
+                double vertexDot = Vector3d.Dot(dirVector, closestVertex);
+                Console.WriteLine("Level: " + i + ", Closest: " + closestVertexID + ", Direction: " + closestVertex + ", Dot: " + vertexDot + ", error: " + error + ", time: " + swRaycast.ElapsedMilliseconds + " ms.");
+            }
+
+            //Raycast vertex
+
+
+            Console.WriteLine("===TREE RAYCAST FACE TESTING===");
+            Console.WriteLine("Source Direction: " + dirVector);
+            for (int i = 0; i <= icoLevel; i++)
+            {
+
+                int closestFaceID = 0;
+                Stopwatch swRaycastFace = new Stopwatch();
+                swRaycastFace.Start();
+                for (int currentLoop = 0; currentLoop < raycastLoops; currentLoop++)
+                {
+                    closestFaceID = IcoCommon.RaycastFace(dirVector, i, false);
+                }
+                swRaycastFace.Stop();
+                List<Face> rawFaces = IcoCommon.GetFacesRaw(i);
+                Face closestFace = rawFaces[closestFaceID];
+                Vector3d faceCentre = (rawVertex[closestFace.point1] + rawVertex[closestFace.point2] + rawVertex[closestFace.point3]).normalized;
+                double error = (faceCentre - dirVector).magnitude;
+                double centerDot = Vector3d.Dot(dirVector, faceCentre);
+                Console.WriteLine("Level: " + i + ", Closest: " + closestFaceID + ", Vertex edges: [" + closestFace.point1 + "," + closestFace.point2 + "," + closestFace.point3 + "], Center: " + faceCentre + ", Dot: " + centerDot + ", error: " + error + ", time: " + swRaycastFace.ElapsedMilliseconds + " ms.");
             }
         }
     }

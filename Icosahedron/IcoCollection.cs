@@ -46,19 +46,19 @@ namespace Icosahedron
 
         public int[] GetNeighboursIndex(int index)
         {
-            return IcoCommon.GetNeighboursIndex(level, index);
+            return IcoCommon.GetNeighboursVertexIndex(level, index);
         }
 
         public IEnumerable<T> GetNeighbours(int index)
         {
-            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6]];
-            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 1]];
-            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 2]];
-            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 3]];
-            yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 4]];
-            if (IcoCommon.GetNeighboursRaw(level)[index * 6 + 5] != -1)
+            yield return values[IcoCommon.GetNeighboursVertexRaw(level)[index * 6]];
+            yield return values[IcoCommon.GetNeighboursVertexRaw(level)[index * 6 + 1]];
+            yield return values[IcoCommon.GetNeighboursVertexRaw(level)[index * 6 + 2]];
+            yield return values[IcoCommon.GetNeighboursVertexRaw(level)[index * 6 + 3]];
+            yield return values[IcoCommon.GetNeighboursVertexRaw(level)[index * 6 + 4]];
+            if (IcoCommon.GetNeighboursVertexRaw(level)[index * 6 + 5] != -1)
             {
-                yield return values[IcoCommon.GetNeighboursRaw(level)[index * 6 + 5]];
+                yield return values[IcoCommon.GetNeighboursVertexRaw(level)[index * 6 + 5]];
             }
         }
 
